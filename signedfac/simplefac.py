@@ -419,11 +419,13 @@ class Model:
         o1c,o2c = self._get_col_data_stats(X)
         self.colinfo.update_post_from_suffstats(o1c,o2c)
 
-    def update_thetas(self,X):
+    def update_thetas(self,X,minth=1e-12):
         if not lowlevel.has_theta[self.kind]:
             return
         zetamean = self._get_zeta(X) / self.shape[0]
-        self.thetas.assign(lowlevel.solve_theta(zetamean,self.kind))
+        newthetas=lowlevel.solve_theta(zetamean,self.kind)
+        newthetas=tf.clip_by_value(newthetas,minth,np.inf)
+        self.thetas.assign(newthetas)
 
     def update_prior_rows(self,X):
         self.rowinfo.update_prior()
@@ -574,14 +576,17 @@ def initialize_with_new_rows(n_rows,snap,covariates=None):
 
     return model
 
-def initialize(data,Nk,kind,dtype=tf.float64,diagsig=False,row_covariates=None,col_covariates=None):
+def initialize(data,Nk,kind,dtype=tf.float64,diagsig=False,row_covariates=None,col_covariates=None,
+                                minvar=1e-8):
     if sparsematrix.is_in_tensorflow_land(data):
         data=data._source.astype(np.float64)
     else:
         data=data.astype(np.float64)
 
     if kind=='normal':
-        thetas=tf.convert_to_tensor(var_data(data),dtype=dtype)
+        thetas=var_data(data)
+        thetas[thetas<minvar]=minvar
+        thetas=tf.convert_to_tensor(thetas,dtype=dtype)
         tot=data
     elif kind=='bernoulli':
         tot= make_dmhalf_op(data)

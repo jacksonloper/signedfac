@@ -66,6 +66,7 @@ def assign_stats2natural(omega1,omega2,muhat,Sighat,lr,omega1_prior=0,omega2_pri
     omega1=omega1 + omega1_prior
 
     # new stuff!
+    # new_Sighat = helpers.safe_inverse(omega2,1e-8)
     new_Sighat = tf.linalg.inv(omega2)
     new_Sighat=helpers.symmetrize(new_Sighat)
     new_muhat = tf.linalg.solve(omega2,omega1[...,None])[...,0]
